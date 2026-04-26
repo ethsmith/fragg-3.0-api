@@ -19,8 +19,35 @@ import { Router, Request, Response, NextFunction, RequestHandler } from 'express
 import { Error as MongooseError, FilterQuery } from 'mongoose';
 import { PlayerStatsModel, PlayerStats } from '../models/PlayerStats';
 import { requireApiKey } from '../middleware/requireApiKey';
+import { buildPlayerAggregationPipeline } from './playerStatsAggregation';
 
 const router = Router();
+
+/**
+ * Cache-Control middleware applied to every GET response in this router.
+ *
+ * Reads are public, idempotent, and the underlying data only changes when the
+ * parser ingests a new match (irregular but bursty). Letting Vercel's Edge
+ * cache hold responses for a few minutes makes the heavy aggregation/list
+ * endpoints near-instant for everyone after the first warm hit.
+ *
+ *   * `s-maxage=300`              CDN holds the response for 5 minutes.
+ *   * `stale-while-revalidate=600`  serves stale up to 10 more minutes while
+ *                                   refreshing in the background.
+ *   * `max-age=0`                 browsers always revalidate (so a fresh
+ *                                   ingest is visible after the CDN expires).
+ */
+function cacheReads(req: Request, res: Response, next: NextFunction): void {
+  if (req.method === 'GET') {
+    res.setHeader(
+      'Cache-Control',
+      'public, max-age=0, s-maxage=300, stale-while-revalidate=600',
+    );
+  }
+  next();
+}
+
+router.use(cacheReads);
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -131,6 +158,37 @@ router.post(
   asyncHandler(async (req, res) => {
     const upsert = req.query.upsert === 'true';
     await ingest(req.body, req.params.matchId, upsert, res);
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// GET /player-stats/aggregated   — one record per player
+//
+// Collapses every raw match doc into a single per-player document with all
+// counters summed and rate/percentage fields weighted-averaged by
+// rounds_played. This is the endpoint the csc-archetypes client uses; doing
+// the aggregation server-side avoids streaming ~37 MB of raw match docs to
+// the browser.
+//
+// Optional `?steam_id=` (repeatable) scopes the aggregation to specific
+// players. Without it, every player is aggregated.
+// ---------------------------------------------------------------------------
+
+router.get(
+  '/aggregated',
+  asyncHandler(async (req, res) => {
+    const raw = req.query.steam_id;
+    const steamIds: string[] | undefined =
+      typeof raw === 'string'
+        ? [raw]
+        : Array.isArray(raw)
+          ? raw.filter((v): v is string => typeof v === 'string')
+          : undefined;
+
+    const pipeline = buildPlayerAggregationPipeline(steamIds);
+    const docs = await PlayerStatsModel.aggregate(pipeline).allowDiskUse(true);
+
+    res.json({ count: docs.length, results: docs });
   }),
 );
 
