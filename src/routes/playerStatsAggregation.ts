@@ -226,7 +226,11 @@ const MULTI_KILL_KEYS = ['1k', '2k', '3k', '4k', '5k'] as const;
  * `steam_id` values (used by callers that want a subset; defaults to "all
  * players" when omitted).
  */
-export function buildPlayerAggregationPipeline(steamIds?: string[]): PipelineStage[] {
+export function buildPlayerAggregationPipeline(
+  steamIds?: string[],
+  season?: number,
+  type?: string,
+): PipelineStage[] {
   const groupStage: Record<string, unknown> = {
     _id: '$steam_id',
     games: { $sum: 1 },
@@ -294,6 +298,14 @@ export function buildPlayerAggregationPipeline(steamIds?: string[]): PipelineSta
 
   if (steamIds && steamIds.length > 0) {
     pipeline.push({ $match: { steam_id: { $in: steamIds } } });
+  }
+
+  if (season != null) {
+    pipeline.push({ $match: { season } });
+  }
+
+  if (type != null) {
+    pipeline.push({ $match: { type } });
   }
 
   // Sort by createdAt so $last picks the player's latest doc deterministically.

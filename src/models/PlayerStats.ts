@@ -43,6 +43,8 @@ const playerStatsSchema = new Schema(
     steam_id: { type: String, required: true, index: true },
     name: { type: String, default: '' },
     team_name: { type: String, default: '' },
+    season: { type: Number, default: 0 },
+    type: { type: String, enum: ['regulation', 'combine'], default: 'regulation' },
 
     // --- Basic per-game counters -----------------------------------------
     rounds_played: num,

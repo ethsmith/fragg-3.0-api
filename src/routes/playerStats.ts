@@ -185,7 +185,12 @@ router.get(
           ? raw.filter((v): v is string => typeof v === 'string')
           : undefined;
 
-    const pipeline = buildPlayerAggregationPipeline(steamIds);
+    const season =
+      typeof req.query.season === 'string' ? Number(req.query.season) : undefined;
+    const type =
+      typeof req.query.type === 'string' ? req.query.type : undefined;
+
+    const pipeline = buildPlayerAggregationPipeline(steamIds, season, type);
     const docs = await PlayerStatsModel.aggregate(pipeline).allowDiskUse(true);
 
     res.json({ count: docs.length, results: docs });
@@ -202,6 +207,8 @@ router.get(
     const filter: FilterQuery<PlayerStats> = {};
     if (typeof req.query.match_id === 'string') filter.match_id = req.query.match_id;
     if (typeof req.query.steam_id === 'string') filter.steam_id = req.query.steam_id;
+    if (typeof req.query.season === 'string') filter.season = Number(req.query.season);
+    if (typeof req.query.type === 'string') filter.type = req.query.type;
 
     const limit = parseNonNegInt(req.query.limit, 100, 500);
     const skip = parseNonNegInt(req.query.skip, 0);
