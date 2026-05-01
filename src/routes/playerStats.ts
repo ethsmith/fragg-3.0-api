@@ -229,7 +229,9 @@ router.get(
 router.get(
   '/match/:matchId',
   asyncHandler(async (req, res) => {
-    const docs = await PlayerStatsModel.find({ match_id: req.params.matchId }).lean();
+    const filter: Record<string, unknown> = { match_id: req.params.matchId };
+    if (typeof req.query.type === 'string') filter.type = req.query.type;
+    const docs = await PlayerStatsModel.find(filter).lean();
     res.json({ match_id: req.params.matchId, count: docs.length, results: docs });
   }),
 );
