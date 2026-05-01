@@ -267,7 +267,7 @@ const playerStatsSchema = new Schema(
 
 // One document per (match, player). Prevents accidental duplicate inserts
 // when re-parsing the same demo.
-playerStatsSchema.index({ match_id: 1, steam_id: 1 }, { unique: true });
+playerStatsSchema.index({ match_id: 1, steam_id: 1, type: 1 }, { unique: true });
 
 // -----------------------------------------------------------------------------
 // Types

@@ -59,6 +59,7 @@ export async function connectDB(): Promise<typeof mongoose> {
 
   try {
     cached.conn = await cached.promise;
+    await migrateIndexes(cached.conn);
   } catch (err) {
     cached.promise = null;
     throw err;
@@ -76,3 +77,21 @@ export async function disconnectDB(): Promise<void> {
 }
 
 export { mongoose };
+
+/**
+ * Drop the old { match_id, steam_id } unique index so the new
+ * { match_id, steam_id, type } index can coexist with regulation
+ * and combine documents sharing the same CSC match ID.
+ */
+async function migrateIndexes(m: typeof mongoose): Promise<void> {
+  const col = m.connection.db!.collection('player_stats');
+  try {
+    await col.dropIndex('match_id_1_steam_id_1');
+    console.log('[db] dropped old index match_id_1_steam_id_1');
+  } catch (err) {
+    // Index may not exist yet — that's fine.
+    if ((err as { code?: number }).code !== 27) {
+      console.warn('[db] dropIndex match_id_1_steam_id_1:', err);
+    }
+  }
+}

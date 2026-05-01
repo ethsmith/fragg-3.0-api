@@ -101,6 +101,7 @@ async function ingest(
           filter: {
             match_id: d.match_id,
             steam_id: d.steam_id,
+            type: d.type ?? 'regulation',
           },
           update: { $set: d },
           upsert: true,
