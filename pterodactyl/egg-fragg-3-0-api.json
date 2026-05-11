@@ -1,0 +1,92 @@
+{
+  "_comment": "DO NOT EDIT: FILE GENERATED MANUALLY FOR PTERODACTYL PANEL IMPORT",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-05-11T18:07:00+00:00",
+  "name": "Fragg 3.0 API",
+  "author": "ethsmith@users.noreply.github.com",
+  "description": "Pterodactyl egg for the Fragg 3.0 Node.js/TypeScript Express API. Installs from Git, builds the TypeScript project, and starts the compiled server on the primary allocation port.",
+  "features": null,
+  "docker_images": {
+    "Node.js 20": "ghcr.io/parkervcp/yolks:nodejs_20"
+  },
+  "file_denylist": [],
+  "startup": "PORT=${SERVER_PORT} node ./dist/src/bin/www.js",
+  "config": {
+    "files": "{}",
+    "startup": "{\n  \"done\": \"Listening on port\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\nset -e\n\napk add --no-cache git\n\ncd /mnt/server\n\nif [ ! -f package.json ]; then\n  if [ -z \"${GIT_ADDRESS}\" ]; then\n    echo \"GIT_ADDRESS is required when package.json is not already present.\"\n    exit 1\n  fi\n\n  if [ -n \"${GIT_BRANCH}\" ]; then\n    git clone --depth=1 --branch \"${GIT_BRANCH}\" \"${GIT_ADDRESS}\" .\n  else\n    git clone --depth=1 \"${GIT_ADDRESS}\" .\n  fi\nelse\n  echo \"package.json found, skipping repository clone.\"\nfi\n\nif [ -f package-lock.json ]; then\n  npm ci\nelse\n  npm install\nfi\n\nnpm run build\nnpm prune --omit=dev\n",
+      "container": "node:20-alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Git Repository",
+      "description": "Repository cloned during installation if package.json is not already present.",
+      "env_variable": "GIT_ADDRESS",
+      "default_value": "https://github.com/ethsmith/fragg-3.0-api.git",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "Git Branch",
+      "description": "Branch to clone during installation.",
+      "env_variable": "GIT_BRANCH",
+      "default_value": "main",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:191",
+      "field_type": "text"
+    },
+    {
+      "name": "MongoDB URI",
+      "description": "Full MongoDB connection string used by MONGODB_URI.",
+      "env_variable": "MONGODB_URI",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "MongoDB Database",
+      "description": "Optional database name used by MONGODB_DATABASE. Leave blank if the database is included in the MongoDB URI.",
+      "env_variable": "MONGODB_DATABASE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:128",
+      "field_type": "text"
+    },
+    {
+      "name": "API Key",
+      "description": "Shared secret required by protected write endpoints. Send it as Authorization: Bearer <key> or x-api-key.",
+      "env_variable": "API_KEY",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "required|string|min:1",
+      "field_type": "text"
+    },
+    {
+      "name": "Debug Namespace",
+      "description": "Debug logging namespace. The default makes the API print its listening message for Pterodactyl startup detection.",
+      "env_variable": "DEBUG",
+      "default_value": "fragg-3.0-api:*",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:191",
+      "field_type": "text"
+    }
+  ]
+}
