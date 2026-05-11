@@ -192,7 +192,7 @@ router.get(
       typeof req.query.type === 'string' ? req.query.type : undefined;
 
     const pipeline = buildPlayerAggregationPipeline(steamIds, season, type);
-    const docs = await PlayerStatsModel.aggregate(pipeline).allowDiskUse(true);
+    const docs = await PlayerStatsModel.aggregate(pipeline, { allowDiskUse: true });
 
     res.json({ count: docs.length, results: docs });
   }),

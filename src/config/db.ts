@@ -85,6 +85,14 @@ export { mongoose };
  */
 async function migrateIndexes(m: typeof mongoose): Promise<void> {
   const col = m.connection.db!.collection('player_stats');
+  await col.createIndexes([
+    { key: { createdAt: 1 }, name: 'createdAt_1' },
+    { key: { season: 1, type: 1, createdAt: 1 }, name: 'season_1_type_1_createdAt_1' },
+    {
+      key: { steam_id: 1, season: 1, type: 1, createdAt: 1 },
+      name: 'steam_id_1_season_1_type_1_createdAt_1',
+    },
+  ]);
   try {
     await col.dropIndex('match_id_1_steam_id_1');
     console.log('[db] dropped old index match_id_1_steam_id_1');
