@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { MatchModel } from '../models/Match';
 
 /**
  * MongoDB connection helper.
@@ -59,7 +60,7 @@ export async function connectDB(): Promise<typeof mongoose> {
 
   try {
     cached.conn = await cached.promise;
-    await migrateIndexes(cached.conn);
+    await ensureIndexes();
   } catch (err) {
     cached.promise = null;
     throw err;
@@ -79,27 +80,9 @@ export async function disconnectDB(): Promise<void> {
 export { mongoose };
 
 /**
- * Drop the old { match_id, steam_id } unique index so the new
- * { match_id, steam_id, type } index can coexist with regulation
- * and combine documents sharing the same CSC match ID.
+ * Builds the Match model's indexes. createIndexes is idempotent, so this is
+ * cheap on every cold start.
  */
-async function migrateIndexes(m: typeof mongoose): Promise<void> {
-  const col = m.connection.db!.collection('player_stats');
-  await col.createIndexes([
-    { key: { createdAt: 1 }, name: 'createdAt_1' },
-    { key: { season: 1, type: 1, createdAt: 1 }, name: 'season_1_type_1_createdAt_1' },
-    {
-      key: { steam_id: 1, season: 1, type: 1, createdAt: 1 },
-      name: 'steam_id_1_season_1_type_1_createdAt_1',
-    },
-  ]);
-  try {
-    await col.dropIndex('match_id_1_steam_id_1');
-    console.log('[db] dropped old index match_id_1_steam_id_1');
-  } catch (err) {
-    // Index may not exist yet — that's fine.
-    if ((err as { code?: number }).code !== 27) {
-      console.warn('[db] dropIndex match_id_1_steam_id_1:', err);
-    }
-  }
+async function ensureIndexes(): Promise<void> {
+  await MatchModel.createIndexes();
 }
